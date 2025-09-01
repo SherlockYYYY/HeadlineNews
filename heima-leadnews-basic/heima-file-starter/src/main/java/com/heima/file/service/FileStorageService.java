@@ -1,10 +1,13 @@
 package com.heima.file.service;
 
+import org.springframework.stereotype.Service;
+
 import java.io.InputStream;
 
 /**
  * @author itheima
  */
+@Service
 public interface FileStorageService {
 
 
