@@ -7,6 +7,8 @@ import com.heima.model.wemedia.dtos.WmNewsDto;
 import com.heima.model.wemedia.dtos.WmNewsPageReqDto;
 import com.heima.model.wemedia.pojos.WmNews;
 
+import java.io.IOException;
+
 public interface WmNewsService extends IService<WmNews> {
 
     /**
@@ -19,6 +21,6 @@ public interface WmNewsService extends IService<WmNews> {
     /*
     * 发布修改文章或保存为草稿
     * */
-    public ResponseResult submit(WmNewsDto dto);
+    public ResponseResult submit(WmNewsDto dto) throws IOException;
 
 }

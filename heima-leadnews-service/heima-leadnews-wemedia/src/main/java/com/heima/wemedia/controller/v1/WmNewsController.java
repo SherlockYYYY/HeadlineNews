@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/api/v1/news")
 public class WmNewsController {
@@ -21,7 +23,7 @@ public class WmNewsController {
     }
 
     @PostMapping("/submit")
-    public  ResponseResult submit(@RequestBody WmNewsDto dto){
+    public  ResponseResult submit(@RequestBody WmNewsDto dto) throws IOException {
         return wmNewsService.submit(dto);
     }
 }

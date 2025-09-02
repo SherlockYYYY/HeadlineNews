@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -89,7 +90,7 @@ public class WmNewsServiceImpl  extends ServiceImpl<WmNewsMapper, WmNews> implem
     private WmNewsAutoScanService wmNewsAutoScanService;
 
     @Override
-    public ResponseResult submit(WmNewsDto dto) {
+    public ResponseResult submit(WmNewsDto dto) throws IOException {
         //调教判断
         if(dto == null || dto.getContent() == null){
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);

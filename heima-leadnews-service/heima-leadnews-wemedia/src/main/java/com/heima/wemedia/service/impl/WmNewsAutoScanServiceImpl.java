@@ -1,15 +1,20 @@
 package com.heima.wemedia.service.impl;
 
 import com.alibaba.fastjson.JSONArray;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heima.apis.article.IArticleClient;
+import com.heima.common.tess4j.Tess4jClient;
 import com.heima.file.service.FileStorageService;
 import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.wemedia.pojos.WmChannel;
 import com.heima.model.wemedia.pojos.WmNews;
+import com.heima.model.wemedia.pojos.WmSensitive;
 import com.heima.model.wemedia.pojos.WmUser;
+import com.heima.utils.common.SensitiveWordUtil;
 import com.heima.wemedia.mapper.WmChannelMapper;
 import com.heima.wemedia.mapper.WmNewsMapper;
+import com.heima.wemedia.mapper.WmSensitiveMapper;
 import com.heima.wemedia.mapper.WmUserMapper;
 import com.heima.wemedia.service.WmNewsAutoScanService;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +25,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.sql.Wrapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -47,6 +57,12 @@ public class WmNewsAutoScanServiceImpl implements WmNewsAutoScanService {
 
     @Autowired
     private WmUserMapper wmUserMapper;
+
+    @Autowired
+    private WmSensitiveMapper wmSensitiveMapper;
+
+    @Autowired
+    private Tess4jClient tess4jClient;
     /**
      * 自媒体文章审核  但是没有集成阿里云接口 这里直接审核通过
      * @param id 自媒体文章id
@@ -55,7 +71,7 @@ public class WmNewsAutoScanServiceImpl implements WmNewsAutoScanService {
 
     @Override
     @Async  //表明当前方法是异步方法
-    public void autoScan(Integer id) {
+    public void autoScan(Integer id) throws IOException {
         //1,查询自媒体文章
         WmNews wmNews = wmNewsMapper.selectById(id);
         if(wmNews == null){
@@ -64,6 +80,9 @@ public class WmNewsAutoScanServiceImpl implements WmNewsAutoScanService {
         if(wmNews.getStatus().equals(WmNews.Status.SUBMIT.getCode())){
             //从内容中抽取文章内容和图片
             Map<String, Object> textAndImages = extractTextAndImages(wmNews);
+            //自管理的敏感词
+            boolean isSensitive = handleSensitive((String) textAndImages.get("content"),wmNews);
+            if(!isSensitive)return;
             //2.审核内容
             boolean isTextPass = handleTextScan((String) textAndImages.get("content"),wmNews);
             if(!isTextPass) return;
@@ -81,6 +100,32 @@ public class WmNewsAutoScanServiceImpl implements WmNewsAutoScanService {
 
 
     }
+    /**
+     * 自管理的敏感词
+     * @param content
+     * @param wmNews
+     * @return
+     */
+
+    private boolean handleSensitive(String content, WmNews wmNews) {
+        boolean flag = true;
+        //获取所有的敏感词
+        List<WmSensitive> wmSensitives = wmSensitiveMapper.selectList(new LambdaQueryWrapper< WmSensitive>().select(WmSensitive::getSensitives));
+
+        List<String> sensitiveList = wmSensitives.stream().map(WmSensitive::getSensitives).collect(Collectors.toList());
+        //初始化敏感词库
+        SensitiveWordUtil.initMap(sensitiveList);
+        //查看文中是否包含敏感
+        Map<String, Integer> map = SensitiveWordUtil.matchWords(content);
+        if(map.size() > 0){
+            wmNews.setStatus((short) 2);
+            wmNews.setReason("当前文章中存在违规内容："+map);
+            wmNewsMapper.updateById(wmNews);
+            flag = false;
+        }
+        return flag;
+    }
+
     /**
      * 保存app端相关文章数据
      * @param wmNews
@@ -124,14 +169,25 @@ public class WmNewsAutoScanServiceImpl implements WmNewsAutoScanService {
      * @param wmNews
      * @return
      */
-    private boolean handleImageScan(List<String> images, WmNews wmNews) {
+    private boolean handleImageScan(List<String> images, WmNews wmNews) throws IOException {
         boolean flag = true;
         //去重
-//        images = images.stream().distinct().collect(Collectors.toList());
-//        for (String image : images) {
-//            //上传图片到fastdfs
-//            byte[] bytes = fileStorageService.downLoadFile(image);
-//        }
+        images = images.stream().distinct().collect(Collectors.toList());
+        try{
+            for (String image : images) {
+                //上传图片到fastdfs  byte[]转换为BufferedImage
+                byte[] bytes = fileStorageService.downLoadFile(image);
+
+                ByteArrayInputStream  inputStream = new ByteArrayInputStream(bytes);
+                BufferedImage bufferedImage = ImageIO.read(inputStream);
+                //图片识别
+                String result = tess4jClient.doOCR(bufferedImage);
+                boolean isSensitive = handleSensitive(result,wmNews);
+                if(!isSensitive) return false;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
 
         return flag;
 
