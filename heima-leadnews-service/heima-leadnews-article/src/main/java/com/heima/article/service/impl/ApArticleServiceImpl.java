@@ -7,6 +7,7 @@ import com.heima.article.mapper.ApArticleConfigMapper;
 import com.heima.article.mapper.ApArticleContentMapper;
 import com.heima.article.mapper.ApArticleMapper;
 import com.heima.article.service.ApArticleService;
+import com.heima.article.service.ArticleFreemarkerService;
 import com.heima.common.constants.ArticleConstants;
 import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.article.dtos.ArticleHomeDto;
@@ -37,6 +38,9 @@ public class ApArticleServiceImpl extends ServiceImpl<ApArticleMapper, ApArticle
 
     @Autowired
     private ApArticleContentMapper apArticleContentMapper;
+
+    @Autowired
+    private ArticleFreemarkerService articleFreemarkerService;
 
 
     private final static short MAX_PAGE_SIZE = 50;
@@ -115,6 +119,15 @@ public class ApArticleServiceImpl extends ServiceImpl<ApArticleMapper, ApArticle
             apArticleContentMapper.updateById(apArticleContent);
 
         }
+
+        //异步调用生成静态文件上传到minio
+
+        try {
+            articleFreemarkerService.buildArticleToMinio(apArticle, dto.getContent());
+        } catch (Exception e) {
+            log.error("生成静态文件上传到minio失败",e);
+        }
+
         //3.结果返回
         return ResponseResult.okResult(apArticle.getId());
     }
