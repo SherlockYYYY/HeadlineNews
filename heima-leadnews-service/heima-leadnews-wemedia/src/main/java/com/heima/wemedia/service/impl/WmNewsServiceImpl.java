@@ -20,6 +20,7 @@ import com.heima.utils.thread.WmThreadLocalUtil;
 import com.heima.wemedia.mapper.WmMaterialMapper;
 import com.heima.wemedia.mapper.WmNewsMapper;
 import com.heima.wemedia.mapper.WmNewsMaterialMapper;
+import com.heima.wemedia.service.WmNewsAutoScanService;
 import com.heima.wemedia.service.WmNewsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -84,6 +85,8 @@ public class WmNewsServiceImpl  extends ServiceImpl<WmNewsMapper, WmNews> implem
         responseResult.setData(pgs.getRecords());
         return responseResult;
     }
+    @Autowired
+    private WmNewsAutoScanService wmNewsAutoScanService;
 
     @Override
     public ResponseResult submit(WmNewsDto dto) {
@@ -116,7 +119,8 @@ public class WmNewsServiceImpl  extends ServiceImpl<WmNewsMapper, WmNews> implem
         saveRelationForContent(materials,wmNews.getId());
         //4.保存文章封面图片与素材的关系  如果是自动 需要匹配封面图片
         saveRelationForCover(dto,wmNews, materials);
-
+        //5.自媒体文章审核  异步线程审核
+        wmNewsAutoScanService.autoScan(wmNews.getId());
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
     /**
