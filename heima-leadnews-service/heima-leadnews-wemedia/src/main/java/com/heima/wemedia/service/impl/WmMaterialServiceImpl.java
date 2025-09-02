@@ -17,10 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Objects;
 import java.util.UUID;
 
 
@@ -82,5 +84,87 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
         ResponseResult responseResult = new PageResponseResult(dto.getPage(),dto.getSize(),(int)pages.getTotal());
         responseResult.setData(pages.getRecords());
         return responseResult;
+    }
+
+    @Override
+    public ResponseResult delPicture(Integer id) {
+        //1.检查参数
+        if(id == null){
+            log.error("{} WmMaterialServiceImpl删除图片失败，id为null",501);
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        //2.根据id查询图片
+        WmMaterial wmMaterial = getById(id);
+        if(wmMaterial == null){
+            log.error("{} WmMaterialServiceImpl删除图片失败，图片不存在",1002);
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST);
+        }
+        if(!Objects.equals(wmMaterial.getUserId(), WmThreadLocalUtil.getUser().getId())){
+            log.error("{} WmMaterialServiceImpl删除图片失败，没有权限",3000);
+            return ResponseResult.errorResult(AppHttpCodeEnum.NO_OPERATOR_AUTH);
+        }
+        //3.删除图片
+        boolean flag = removeById(id);
+        if(flag){
+            log.info("{} WmMaterialServiceImpl删除图片成功",200);
+            return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+        }
+        log.error("{} WmMaterialServiceImpl删除图片失败",501);
+        return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"图片删除失败");
+    }
+
+    @Override
+    public ResponseResult collect(Integer id) {
+        //1.检查参数
+        if(id == null){
+            log.error("{} WmMaterialServiceImpl收藏图片失败，id为null",501);
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        WmMaterial wmMaterial = getById(id);
+        if(wmMaterial == null){
+            log.error("{} WmMaterialServiceImpl收藏图片失败，图片不存在",1002);
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST);
+        }
+        if(!Objects.equals(wmMaterial.getUserId(), WmThreadLocalUtil.getUser().getId())){
+            log.error("{} WmMaterialServiceImpl收藏图片失败，没有权限",3000);
+            return ResponseResult.errorResult(AppHttpCodeEnum.NO_OPERATOR_AUTH);
+        }
+        wmMaterial.setIsCollection((short)1);
+        boolean flag = updateById(wmMaterial);
+        if(flag){
+            log.info("{} WmMaterialServiceImpl收藏图片成功",200);
+            return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+        }
+        log.error("{} WmMaterialServiceImpl收藏图片失败",501);
+        wmMaterial.setIsCollection((short)0);
+        return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"图片收藏失败");
+    }
+
+    @Override
+    public ResponseResult cancelCollect(Integer id) {
+        //1.检查参数
+        if(id == null){
+            log.error("{} WmMaterialServiceImpl取消收藏图片失败，id为null",501);
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        //2.根据id查询图片
+        WmMaterial wmMaterial = getById(id);
+        if(wmMaterial == null){
+            log.error("{} WmMaterialServiceImpl取消收藏图片失败，图片不存在",1002);
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST);
+        }
+        if(!Objects.equals(wmMaterial.getUserId(), WmThreadLocalUtil.getUser().getId())){
+            log.error("{} WmMaterialServiceImpl取消收藏图片失败，没有权限",3000);
+            return ResponseResult.errorResult(AppHttpCodeEnum.NO_OPERATOR_AUTH);
+        }
+        wmMaterial.setIsCollection((short)0);
+        boolean flag = updateById(wmMaterial);
+        if(flag){
+            log.info("{} WmMaterialServiceImpl取消收藏图片成功",200);
+            return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+        }
+        log.error("{} WmMaterialServiceImpl取消收藏图片失败",501);
+        wmMaterial.setIsCollection((short)1);
+        return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"图片取消收藏失败");
     }
 }

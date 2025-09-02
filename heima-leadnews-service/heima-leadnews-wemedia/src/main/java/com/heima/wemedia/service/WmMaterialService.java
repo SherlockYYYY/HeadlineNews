@@ -16,4 +16,13 @@ public interface WmMaterialService extends IService<WmMaterial> {
     素材列表
      */
     public ResponseResult findList(WmMaterialDto dto);
+
+    /*
+    删除素材
+     */
+    public ResponseResult delPicture(Integer id);
+
+    public ResponseResult collect(Integer id);
+
+    public ResponseResult cancelCollect(Integer id);
 }
