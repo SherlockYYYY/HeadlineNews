@@ -1,8 +1,8 @@
 server:
-  port: 51801
+  port: 51701
 spring:
   application:
-    name: leadnews-user
+    name: leadnews-schedule
   cloud:
     nacos:
       discovery:
