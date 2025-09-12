@@ -23,4 +23,10 @@ public interface WmNewsService extends IService<WmNews> {
     * */
     public ResponseResult submit(WmNewsDto dto) throws IOException;
 
+    /**
+     * 上下架文章 需要wm端通过kafka发送消息让app端执行
+     * @param dto
+     * @return
+     */
+    public ResponseResult downOrUp(WmNewsDto dto);
 }
