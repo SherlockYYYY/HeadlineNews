@@ -126,7 +126,11 @@ public class ApArticleServiceImpl extends ServiceImpl<ApArticleMapper, ApArticle
             articleFreemarkerService.buildArticleToMinio(apArticle, dto.getContent());
         } catch (Exception e) {
             log.error("生成静态文件上传到minio失败",e);
+            throw new RuntimeException("生成静态文件上传到minio失败");
         }
+
+        //因为往es中索引(也就是表)添加文档(也就是记录)
+        // 有个staticurl字段 所以要等上传minio生成该字段之后才能发送消息让es更新索引
 
         //3.结果返回
         return ResponseResult.okResult(apArticle.getId());
