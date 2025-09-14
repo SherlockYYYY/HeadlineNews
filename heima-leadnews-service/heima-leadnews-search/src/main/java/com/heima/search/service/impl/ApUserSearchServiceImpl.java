@@ -2,6 +2,7 @@ package com.heima.search.service.impl;
 
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
+import com.heima.model.search.dtos.HistorySearchDto;
 import com.heima.model.user.pojos.ApUser;
 import com.heima.search.pojos.ApUserSearch;
 import com.heima.search.service.ApUserSearchService;
@@ -33,7 +34,7 @@ public class ApUserSearchServiceImpl implements ApUserSearchService {
      */
     @Override
     @Async  //因为是搜索时候异步调用
-    public void insert(String keyword, Integer userId) {
+    public void insert(String keyword, Integer userId) {  ///这边传userid 是为了方便异步调用，不然新起线程拿不到userid
         //查询当前用户的搜索关键词
         Query query = Query.query(Criteria.where("userId").is(userId).and("keyword").is(keyword));
         ApUserSearch apUserSearch = mongoTemplate.findOne(query, ApUserSearch.class);
@@ -78,5 +79,22 @@ public class ApUserSearchServiceImpl implements ApUserSearchService {
         //根据用户查询，按时间倒序
         List<ApUserSearch> apUserSearches = mongoTemplate.find(Query.query(Criteria.where("userId").is(user.getId())).with(Sort.by(Sort.Direction.DESC, "createdTime")), ApUserSearch.class);
         return ResponseResult.okResult(apUserSearches);
+    }
+
+    @Override
+    public ResponseResult delUserSearch(HistorySearchDto dto) {
+        //1.检查参数
+        if (dto.getId() == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        //2.判断是否登录
+        ApUser user = AppThreadLocalUtil.getUser();
+        if (user == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.NEED_LOGIN);
+        }
+
+        //3.删除
+        mongoTemplate.remove(Query.query(Criteria.where("id").is(dto.getId()).and("userId").is(user.getId())),ApUserSearch.class);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }
