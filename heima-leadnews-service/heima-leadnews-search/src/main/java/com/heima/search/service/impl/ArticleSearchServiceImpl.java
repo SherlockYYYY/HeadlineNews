@@ -4,7 +4,10 @@ import com.alibaba.fastjson.JSON;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.search.dtos.UserSearchDto;
+import com.heima.model.user.pojos.ApUser;
+import com.heima.search.service.ApUserSearchService;
 import com.heima.search.service.ArticleSearchService;
+import com.heima.utils.thread.AppThreadLocalUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.elasticsearch.action.search.SearchRequest;
@@ -35,6 +38,9 @@ public class ArticleSearchServiceImpl implements ArticleSearchService {
     @Autowired
     private RestHighLevelClient restHighLevelClient;
 
+    @Autowired
+    private ApUserSearchService apUserSearchService;  // 保存用户搜索记录
+
     /**
      * es分页搜索文章
      *
@@ -48,6 +54,14 @@ public class ArticleSearchServiceImpl implements ArticleSearchService {
         //1,检查参数
         if (dto == null || StringUtils.isBlank(dto.getSearchWords())) { // 没有搜索词 或者 前端穿了空数据
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        //异步调用保存搜索记录
+        ApUser user = AppThreadLocalUtil.getUser();
+        if(user != null && dto.getFromIndex() == 0){
+            //用户登陆才能保存
+            //getFromIndex 意思是，当我每次输入关键词搜索，可能会出现多页，每次都会调用这个方法，
+            // 所以只需要在第一页也就是刚搜索出来时候保存记录，不然每次翻页都保存一次
+            apUserSearchService.insert(dto.getSearchWords(), user.getId());
         }
         //2，设置查询条件
         SearchRequest searchRequest = new SearchRequest("app_info_article"); //查找哪个索引库 也就是表

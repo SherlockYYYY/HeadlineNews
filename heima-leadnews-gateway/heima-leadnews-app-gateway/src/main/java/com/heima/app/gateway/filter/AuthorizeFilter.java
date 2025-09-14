@@ -42,6 +42,13 @@ public class AuthorizeFilter implements GlobalFilter, Ordered {
                 response.setStatusCode(HttpStatus.UNAUTHORIZED);  //返回401 未授权
                 return response.setComplete();
             }
+            ///在保存用户搜索历史记录时新加入的获取token中的用户id，存入线程
+            //获取用户信息
+            Object userId = claimsBody.get("id",  Long.class);
+            //存入header 以便后获取
+            ServerHttpRequest se = request.mutate().headers(httpHeaders -> httpHeaders.add("userId", userId + "")).build();
+            //重置请求
+            exchange = exchange.mutate().request(se).build();
         }catch (Exception e){
             e.printStackTrace();
             response.setStatusCode(HttpStatus.UNAUTHORIZED);  //返回401 未授权

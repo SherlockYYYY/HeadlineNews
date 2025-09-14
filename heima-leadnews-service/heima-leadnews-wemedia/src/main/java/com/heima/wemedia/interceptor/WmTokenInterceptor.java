@@ -32,6 +32,11 @@ public class WmTokenInterceptor implements HandlerInterceptor {
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
         //移除线程
+//        WmThreadLocalUtil.clear();
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         WmThreadLocalUtil.clear();
     }
 }
