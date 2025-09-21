@@ -1,5 +1,8 @@
 package com.heima.wemedia.service;
 
+import com.heima.model.common.dtos.ResponseResult;
+import com.heima.model.wemedia.pojos.WmNews;
+
 import java.io.IOException;
 
 public interface WmNewsAutoScanService {
@@ -9,4 +12,11 @@ public interface WmNewsAutoScanService {
      * @return
      */
     void autoScan(Integer id) throws IOException;
+
+    /**
+     * 保存app文章数据
+     * @param wmNews
+     * @return
+     */
+    public ResponseResult saveAppArticle(WmNews wmNews);
 }
