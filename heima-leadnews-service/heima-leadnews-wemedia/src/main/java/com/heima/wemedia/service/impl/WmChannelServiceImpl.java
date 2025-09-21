@@ -83,6 +83,7 @@ public class WmChannelServiceImpl extends ServiceImpl<WmChannelMapper, WmChannel
         }
 
         wmChannel.setCreatedTime(new Date());
+        wmChannel.setIsDefault( true);
         save(wmChannel);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
@@ -105,6 +106,11 @@ public class WmChannelServiceImpl extends ServiceImpl<WmChannelMapper, WmChannel
         if(wmNewsService.count(queryWrapper) > 0){
             return ResponseResult.errorResult(AppHttpCodeEnum.DATA_EXIST,"频道下有文章正在发布,不能禁用");
         }
+
+        int count = count(Wrappers.<WmChannel>lambdaQuery().eq(WmChannel::getName, wmChannel.getName()));
+        if (count > 0){
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_EXIST,"频道名称已存在");
+        }
         updateById(wmChannel);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
@@ -117,6 +123,26 @@ public class WmChannelServiceImpl extends ServiceImpl<WmChannelMapper, WmChannel
      */
     @Override
     public ResponseResult delete(Integer id) {
-        return null;
+        if(id == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        //2.查询频道
+        WmChannel wmChannel = getById(id);
+        if(wmChannel == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"频道不存在");
+        }
+        //3.频道是否有效
+        if(wmChannel.getStatus()){
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_EXIST,"频道是启用状态,不能删除");
+        }
+        //判断是否被引用
+        int count = wmNewsService.count(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getChannelId, wmChannel.getId())
+                .eq(WmNews::getStatus, WmNews.Status.PUBLISHED.getCode()));
+        if(count > 0){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"频道被引用不能删除");
+        }
+        //4.删除
+        removeById(id);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }
