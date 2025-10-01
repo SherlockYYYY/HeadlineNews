@@ -102,6 +102,12 @@ public class ArticleSearchServiceImpl implements ArticleSearchService {
         for (SearchHit hit : hits) {
             String json  = hit.getSourceAsString(); //es默认返回json数据 转成json字符串
             Map map  = JSON.parseObject(json, Map.class);  //一个一个字段封装成map形式
+
+            // 🔥🔥🔥 关键修复：将 id 转为字符串，防止前端精度丢失
+            if (map.containsKey("id") && map.get("id") != null) {
+                map.put("id", map.get("id").toString());
+            }
+
             //处理高亮
             if(hit.getHighlightFields() != null && hit.getHighlightFields().size() > 0){
                 Text[] titles  = hit.getHighlightFields().get("title").getFragments();

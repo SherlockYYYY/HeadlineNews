@@ -6,10 +6,10 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
 @EnableDiscoveryClient //开启注册中心 让nacos发现自己
-public class HeimaLeadnewsAppGatewayApplication {
+public class AppGatewayApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(HeimaLeadnewsAppGatewayApplication.class, args);
+        SpringApplication.run(AppGatewayApplication.class, args);
     }
 
 }
