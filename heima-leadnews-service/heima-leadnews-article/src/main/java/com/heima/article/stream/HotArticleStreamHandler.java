@@ -3,6 +3,7 @@ package com.heima.article.stream;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.alibaba.fastjson.JSON;
 import com.heima.common.constants.HotArticleConstants;
+import com.heima.model.mess.ArticleVisitStreamMess;
 import com.heima.model.mess.UpdateArticleMess;
 import com.mysql.jdbc.UpdatableResultSet;
 import lombok.extern.slf4j.Slf4j;
@@ -107,9 +108,51 @@ public class HotArticleStreamHandler {
                     }
                 }, Materialized.as("hot-article-stream-count-001"))
                 .toStream()
+                .map((key, value) -> {
+                    //key是消息的key value是formatStr 但是formatStr没有文章id
+                    return new KeyValue<>(key.key(), formatObj(key.key(), value));
+                })
                 .to(HotArticleConstants.HOT_ARTICLE_INCR_HANDLE_TOPIC);
                 //Materialized.as是创建一个临时的表，可能很多流程，起个名字
         return stream;
 
+    }
+
+    /**
+     * 格式化对象
+     * @param articleId
+     * @param value
+     * @return
+     */
+    public String formatObj(String articleId, String value) {
+        ArticleVisitStreamMess articleVisitStreamMess = new ArticleVisitStreamMess();
+        articleVisitStreamMess.setArticleId(Long.valueOf(articleId));
+
+        // COLLECTION:0,COMMENT:0,LIKES:0,VIEWS:0
+        String[] valAry = value.split(",");
+        for (String val : valAry) {
+            String[] split = val.split(":");
+            switch (UpdateArticleMess.UpdateArticleType.valueOf(split[0])){
+                case COLLECTION:
+                    articleVisitStreamMess.setCollect(Integer.parseInt(split[1]));
+                    break;
+
+                case COMMENT:
+                    articleVisitStreamMess.setComment(Integer.parseInt(split[1]));
+                    break;
+
+                case LIKES:
+                    articleVisitStreamMess.setLike(Integer.parseInt(split[1]));
+                    break;
+
+                case VIEWS:
+                    articleVisitStreamMess.setView(Integer.parseInt(split[1]));
+                    break;
+
+            }
+        }
+        String jsonString = JSON.toJSONString(articleVisitStreamMess);
+        log.info("聚合消息处理之后的结果为:{}",jsonString);
+        return jsonString;
     }
 }
