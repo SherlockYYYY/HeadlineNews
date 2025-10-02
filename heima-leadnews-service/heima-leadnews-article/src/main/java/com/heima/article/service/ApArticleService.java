@@ -17,6 +17,16 @@ public interface ApArticleService extends IService<ApArticle> {
     public ResponseResult load(ArticleHomeDto dto, Short type);
 
     /**
+     * 加载文章列表
+     * @param dto
+     * @param type 1 加载更多  2 加载最新
+     * @param fisrtPage true 首页 false 非首页  首页不是说明是首页，而是说当前用户第一次加载该频道数据
+     *                  比如java，vue频道，用户首次点击进来就是首页，上滑加载更多，则不是首页
+     *                  下拉加载最新也不是首页
+     * @return
+     */
+    public ResponseResult load2(ArticleHomeDto dto, Short type,boolean fisrtPage);
+    /**
      * 保存app端相关文章
      * @param dto
      * @return

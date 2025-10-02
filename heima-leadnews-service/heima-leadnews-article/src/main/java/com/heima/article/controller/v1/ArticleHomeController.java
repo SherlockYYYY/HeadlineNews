@@ -16,7 +16,8 @@ public class ArticleHomeController {
     private ApArticleService apArticleService;
     @RequestMapping("/load")  //加载首页
     public ResponseResult load(@RequestBody ArticleHomeDto dto){
-        return apArticleService.load(dto, ArticleConstants.LOADTYPE_LOAD_MORE);
+        //return apArticleService.load(dto, ArticleConstants.LOADTYPE_LOAD_MORE);
+        return apArticleService.load2(dto, ArticleConstants.LOADTYPE_LOAD_MORE,true); //默认是首页
     }
 
     @RequestMapping("/loadmore")  //加载更多
