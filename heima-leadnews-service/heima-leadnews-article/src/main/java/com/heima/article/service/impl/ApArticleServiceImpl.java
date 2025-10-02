@@ -21,6 +21,7 @@ import com.heima.model.article.pojos.ApArticleContent;
 import com.heima.model.article.vos.HotArticleVo;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
+import com.heima.model.mess.ArticleVisitStreamMess;
 import com.heima.model.user.pojos.ApUser;
 import com.heima.utils.thread.AppThreadLocalUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +30,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -214,5 +217,120 @@ public class ApArticleServiceImpl extends ServiceImpl<ApArticleMapper, ApArticle
             }
         }
         return load(dto,type);
+    }
+
+    /**
+     * 更新文章的分值
+     *
+     * @param articleVisitStreamMess
+     */
+    @Override
+    public void updateArticleScore(ArticleVisitStreamMess articleVisitStreamMess) {
+        //1.更新文章的阅读，点赞，评论，收藏数量
+        ApArticle apArticle = updateArticle(articleVisitStreamMess); //在这里持久化各个行为的数量，之前第九天没有持久化
+
+        //2.计算文章的分值
+        Integer score = computeScore(apArticle);
+        score *= 3; //当天的更有价值 分数更高
+
+
+        //3.替换当前文章对应频道的热点数据
+        replaceDataToRedis(ArticleConstants.HOT_ARTICLE_FIRST_PAGE + apArticle.getChannelId(), apArticle, score);
+
+        //4，替换推荐对应的热点数据
+        replaceDataToRedis(ArticleConstants.HOT_ARTICLE_FIRST_PAGE + ArticleConstants.DEFAULT_TAG, apArticle, score);
+    }
+
+    /**
+     * 替换数据到redis
+     *
+     * @param HOT_ARTICLE_FIRST_PAGE
+     * @param apArticle
+     * @param score
+     */
+
+    private void replaceDataToRedis(String HOT_ARTICLE_FIRST_PAGE, ApArticle apArticle, Integer score) {
+        String articleListString = cacheService.get(HOT_ARTICLE_FIRST_PAGE);
+        if (StringUtils.isNotBlank(articleListString)) {
+            List<HotArticleVo> hotArticleVoList = JSON.parseArray(articleListString, HotArticleVo.class);
+
+            boolean flag = true;
+
+            //如果缓存中存在该文章 只更新分数
+            for (HotArticleVo hotArticleVo : hotArticleVoList) {
+                if (hotArticleVo.getId().equals(apArticle.getId())) {
+                    hotArticleVo.setScore(score);
+                    flag = false;
+                    break;
+                }
+
+            }
+
+
+            //如果不存在  查询缓存中分值最小的数据，进行比较，如果当前文章分值大，则替换
+            if (flag) {
+                boolean isReplace = false;
+                if (hotArticleVoList.size() >= 30) { //因为缓存30条，不够30直接加入
+                    hotArticleVoList = hotArticleVoList.stream().sorted(Comparator.comparing(HotArticleVo::getScore).reversed()).collect(Collectors.toList());
+                    HotArticleVo lastHot = hotArticleVoList.get(hotArticleVoList.size() - 1);
+
+                    if (lastHot.getScore() < score) {
+                        hotArticleVoList.remove(lastHot);
+                        isReplace = true;
+                    }
+                }
+                if (isReplace) {
+                    HotArticleVo hotArticleVo = new HotArticleVo();
+                    BeanUtils.copyProperties(apArticle, hotArticleVo);
+                    hotArticleVo.setScore(score);
+                    hotArticleVoList.add(hotArticleVo);
+                }
+            }
+            hotArticleVoList = hotArticleVoList.stream().sorted(Comparator.comparing(HotArticleVo::getScore).reversed()).collect(Collectors.toList());
+            cacheService.set(HOT_ARTICLE_FIRST_PAGE, JSON.toJSONString(hotArticleVoList));
+        }
+    }
+
+    /**
+     * 更新文章行为数据
+     * @param articleVisitStreamMess
+     */
+    private ApArticle updateArticle(ArticleVisitStreamMess articleVisitStreamMess) {
+        ApArticle apArticle = getById(articleVisitStreamMess.getArticleId());
+        apArticle.setCollection(apArticle.getCollection() == null ? 0 : apArticle.getCollection() + articleVisitStreamMess.getCollect());
+        apArticle.setComment(apArticle.getComment() == null ? 0 : apArticle.getComment() + articleVisitStreamMess.getComment());
+        apArticle.setLikes(apArticle.getLikes() == null ? 0 : apArticle.getLikes() + articleVisitStreamMess.getLike());
+        apArticle.setViews(apArticle.getViews() == null ? 0 : apArticle.getViews() + articleVisitStreamMess.getView());
+
+        updateById(apArticle);
+        return apArticle;
+
+    }
+
+    /**
+     * 计算文章分值
+     *
+     * @param article
+     * @return
+     */
+    private Integer computeScore(ApArticle article) {
+        Integer score = 0;
+        if (article.getLikes() != null){
+            score += article.getLikes() *  ArticleConstants.HOT_ARTICLE_LIKE_WEIGHT;
+        }
+
+        if (article.getViews() != null){
+            score += article.getViews();
+        }
+
+        if (article.getComment() != null){
+            score += article.getComment() *  ArticleConstants.HOT_ARTICLE_COMMENT_WEIGHT;
+        }
+
+        if (article.getCollection() != null){
+            score += article.getCollection() *  ArticleConstants.HOT_ARTICLE_COLLECTION_WEIGHT;
+        }
+
+        return score;
     }
 }
