@@ -31,14 +31,14 @@ public class ConsumerQuickStart {
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,"org.apache.kafka.common.serialization.StringDeserializer");
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,"org.apache.kafka.common.serialization.StringDeserializer");
         //设置消费者组
-        properties.put(ConsumerConfig.GROUP_ID_CONFIG,"test-group");
+        properties.put(ConsumerConfig.GROUP_ID_CONFIG,"streams-quickstart");
         //关闭自动提交 手动提交  有同步 异步 同步+异步三种方式 因为异步失败之后不会重试
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,false);
 
         //2.创建消费者对象
         KafkaConsumer<String,String> consumer = new KafkaConsumer<String, String>(properties);
         //3.订阅主题
-        consumer.subscribe(Collections.singletonList("topic01"));
+        consumer.subscribe(Collections.singletonList("itcast-topic-out"));
         //4.拉取消息
         try {
             while(true){

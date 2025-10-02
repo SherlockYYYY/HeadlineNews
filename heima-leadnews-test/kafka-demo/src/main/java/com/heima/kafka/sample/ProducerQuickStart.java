@@ -35,23 +35,29 @@ public class ProducerQuickStart {
         //2.生产者对象
         KafkaProducer<String,String> producer = new KafkaProducer<String, String>(properties);
 
+        for (int i = 0; i < 5; i++) {
+
         //封装发送的消息
-        ProducerRecord<String,String> KVrecord = new ProducerRecord<String, String>("topic01","100001","hello kafka");
+            ProducerRecord<String, String> KVrecord = new ProducerRecord<String, String>("itcast-topic-input", "hello kafka");
+            producer.send(KVrecord);
+        }
 
         //3.同步发送消息 但是会阻塞 可以采用异步
 //        RecordMetadata recordMetadata = producer.send(KVrecord).get();
 //        System.out.println(recordMetadata.offset());
-        //3.异步发送消息
-        producer.send(KVrecord, new Callback() {
-            @Override
-            public void onCompletion(RecordMetadata metadata, Exception exception) {
-                if(exception != null){
-                    System.out.println("记录异常消息到日志表");
-                }
-                System.out.println(metadata.offset());
-            }
 
-        });
+
+        //3.异步发送消息
+//        producer.send(KVrecord, new Callback() {
+//            @Override
+//            public void onCompletion(RecordMetadata metadata, Exception exception) {
+//                if(exception != null){
+//                    System.out.println("记录异常消息到日志表");
+//                }
+//                System.out.println(metadata.offset());
+//            }
+//
+//        });
 
         //4.关闭消息通道，必须关闭，否则消息发送不成功
         producer.close();
