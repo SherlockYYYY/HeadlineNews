@@ -53,9 +53,9 @@ public class KafkaStreamQuickStart {
             public Iterable<String> apply(String value) {  //value就是 topic中接收到的消息
                 return Arrays.asList(value.split(" "));
             }
-        }).
+        })
                 //按照value进行分组
-                groupBy((key, value) -> value)
+                .groupBy((key, value) -> value)
                 //10秒的滑动窗口 每十秒聚合一次
                 .windowedBy(TimeWindows.of(Duration.ofSeconds(10)))
                 //统计单词的个数 按照value
@@ -67,7 +67,5 @@ public class KafkaStreamQuickStart {
                     return new KeyValue<>(key.key(), value.toString());
                 })
                 .to("itcast-topic-out"); //发送到新的topic中
-
-
     }
 }
