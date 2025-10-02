@@ -1,0 +1,56 @@
+package com.heima.user.service.impl;
+import com.heima.common.constants.BehaviorConstants;
+import com.heima.common.redis.CacheService;
+import com.heima.model.common.dtos.ResponseResult;
+import com.heima.model.common.enums.AppHttpCodeEnum;
+import com.heima.model.user.dtos.UserRelationDto;
+import com.heima.model.user.pojos.ApUser;
+import com.heima.utils.thread.AppThreadLocalUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import com.heima.user.service.ApUserRelationService;
+
+@Service
+public class ApUserRelationServiceImpl implements ApUserRelationService {
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Autowired
+    private CacheService cacheService;
+
+    /**
+     * 用户关注/取消关注
+     *
+     * @param dto
+     * @return
+     */
+    @Override
+    public ResponseResult follow(UserRelationDto dto) {
+        if (dto.getOperation() == null || dto.getOperation() < 0 || dto.getOperation() > 1) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+
+        //2 判断是否登录
+        ApUser user = AppThreadLocalUtil.getUser();
+        if (user == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.NEED_LOGIN);
+        }
+        Integer apUserId = user.getId();  //当前操作的用户id
+
+
+        //3.关注 apuser:follow:{userId} apuser:fans:{authorId}
+        Integer followUserId = dto.getAuthorId();
+        if (dto.getOperation() == 0){
+            cacheService.zAdd(BehaviorConstants.APUSER_FOLLOW_RELATION + apUserId, followUserId.toString(), System.currentTimeMillis());
+            cacheService.zAdd(BehaviorConstants.APUSER_FANS_RELATION + followUserId, apUserId.toString(), System.currentTimeMillis());
+        }else{
+            cacheService.zRemove(BehaviorConstants.APUSER_FOLLOW_RELATION + apUserId, followUserId.toString());
+            cacheService.zRemove(BehaviorConstants.APUSER_FANS_RELATION + followUserId, apUserId.toString());
+        }
+
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+
+    }
+}
