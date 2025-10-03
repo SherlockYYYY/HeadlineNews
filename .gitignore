@@ -9,3 +9,10 @@
 
 # 忽略所有 .log 文件
 *.log
+
+
+**/classpath
+**/project
+**/*.iml
+**/DS_Store
+**/.gitattributes
